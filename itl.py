@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-from torch.autograd import Function
+from torch.autograd import Function,gradcheck
 
 
 import matplotlib.pyplot as plt
@@ -90,7 +90,7 @@ class MatrixEntropy(Function):
         
         #print(eigenvals.size(),eigenvecs.size())
         t2=torch.mm(torch.diag(eigenvals),eigenvecs.transpose(1,0))
-        return -grad_out[0]*t*torch.mm(eigenvecs,t2)    
+        return grad_out[0]*t*torch.mm(eigenvecs,t2)    
         
 def joint_entropy(x,y):
     prod=x*y
@@ -117,8 +117,8 @@ def corrent_loss(x,y,sigma=torch.Tensor([0.1])):
 if __name__=="__main__":
     me=MatrixEntropy.apply    
     
-    x= torch.Tensor([0,0.1,0.2,0.3])
-    y= torch.Tensor([0,0.1,0.2,0.3])
+    x= torch.Tensor([1.0,2.0,3.0,4.0])
+    y= torch.Tensor([1,2,3,4])
     x.requires_grad=True
     y.requires_grad=True
     
@@ -126,13 +126,19 @@ if __name__=="__main__":
     yM=entM(y)
     
     print(me(xM))
+    print(xM.grad_fn(xM))
     print(me(yM))
     print(joint_entropy(xM,yM))
     print(conditional_entropy(yM,xM))
     print(mutual_information(xM,yM))
     
+    t = torch.Tensor((np.random.rand(20)-0.5)*1000)
+    t.requires_grad=True
     
     
+    print(gradcheck(lambda x:me(entM(x)),t))
+    
+    '''
     x_optim=optim.Adam([x])
     
     for i in range(500):
@@ -146,7 +152,7 @@ if __name__=="__main__":
         print(l.item())
         l.backward()
         x_optim.step()
-    
+    '''
     
 
 
