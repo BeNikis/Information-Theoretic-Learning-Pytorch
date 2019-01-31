@@ -90,7 +90,7 @@ class MatrixEntropy(Function):
         
         #print(eigenvals.size(),eigenvecs.size())
         t2=torch.mm(torch.diag(eigenvals),eigenvecs.transpose(1,0))
-        return grad_out[0]*t*torch.mm(eigenvecs,t2)    
+        return -grad_out[0]*t*torch.mm(eigenvecs,t2)    
         
 def joint_entropy(x,y):
     prod=x*y
@@ -104,11 +104,21 @@ def mutual_information(x,y):
     me=MatrixEntropy.apply
     return me(x)+me(y)-joint_entropy(x,y)
 
+def correntropy(x,y,ker=gauss_kernel):
+    return torch.mean(ker(x,y))
+
+def corrent_loss(x,y,sigma=torch.Tensor([0.1])):
+    ker=lambda x,y:gauss_kernel(x,y,sigma=sigma)
+    beta = 1/(1-torch.exp(-1/(2*sigma*sigma)))
+    
+    return beta*(1-correntropy(x,y,ker))
+    
+
 if __name__=="__main__":
     me=MatrixEntropy.apply    
     
-    x= torch.Tensor([0,0.01,0.02,0.03])
-    y= torch.Tensor([0,0.01,0.02,0.03])
+    x= torch.Tensor([0,0.1,0.2,0.3])
+    y= torch.Tensor([0,0.1,0.2,0.3])
     x.requires_grad=True
     y.requires_grad=True
     
@@ -131,7 +141,7 @@ if __name__=="__main__":
         
         xM=entM(x)
         yM=entM(y)
-        l=mutual_information(yM,xM)
+        l=mutual_information(xM,yM)
         
         print(l.item())
         l.backward()
