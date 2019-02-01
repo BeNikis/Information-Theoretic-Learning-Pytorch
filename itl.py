@@ -27,6 +27,11 @@ def plot_data(datapoints):
     
     return
 
+def calc_bandwidth(data,constant):
+    var=data.var()   
+    h=0.006+(var/(var+constant))*0.1
+    return h
+
 def gauss_kernel(x,y,sigma=torch.tensor(0.1),dim=1,dist=lambda x,y:(torch.Tensor.pow(x-y,2))):
     if (dim==1):
         div=torch.sqrt(np.pi*2*torch.Tensor.pow(sigma,2))
@@ -90,7 +95,7 @@ class MatrixEntropy(Function):
         
         #print(eigenvals.size(),eigenvecs.size())
         t2=torch.mm(torch.diag(eigenvals),eigenvecs.transpose(1,0))
-        return grad_out[0]*t*torch.mm(eigenvecs,t2)    
+        return -grad_out[0]*t*torch.mm(eigenvecs,t2)    
         
 def joint_entropy(x,y):
     prod=x*y
@@ -132,11 +137,19 @@ if __name__=="__main__":
     print(conditional_entropy(yM,xM))
     print(mutual_information(xM,yM))
     
-    t = torch.Tensor((np.random.rand(20)-0.5)*1000)
-    t.requires_grad=True
-    
-    
-    print(gradcheck(lambda x:me(entM(x)),t))
+    its=25
+    f=0
+    for i in range(its):
+        t = torch.Tensor((np.random.rand(20)-0.5))
+        t.requires_grad=True
+        
+        bandwidth=calc_bandwidth(t,1)
+        
+        try:
+            gradcheck(lambda x:me(entM(x,ker=lambda x,y:gauss_kernel(x,y,sigma=bandwidth))),t)
+        except:
+            f+=1
+    print(its-f,'/',its)
     
     '''
     x_optim=optim.Adam([x])
